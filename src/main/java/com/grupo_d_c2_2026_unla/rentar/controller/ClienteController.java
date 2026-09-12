@@ -4,6 +4,8 @@ import com.grupo_d_c2_2026_unla.rentar.dto.ClienteRequestDTO;
 import com.grupo_d_c2_2026_unla.rentar.dto.ClienteResponseDTO;
 import com.grupo_d_c2_2026_unla.rentar.service.ClienteService;
 
+import jakarta.validation.Valid;
+
 import java.util.List;
 
 import org.springframework.http.HttpStatus;
@@ -30,7 +32,7 @@ public class ClienteController {
 
     // ALTA
     @PostMapping
-    public ResponseEntity<ClienteResponseDTO> crear(@RequestBody ClienteRequestDTO cliente) {
+    public ResponseEntity<ClienteResponseDTO> crear(@Valid @RequestBody ClienteRequestDTO cliente) {
         // Reglas de negocio: email y documento únicos,
         // creación automática del usuario y activo=true
         // (esa lógica va en el Service, el controller solo orquesta)
@@ -61,7 +63,7 @@ public class ClienteController {
     @PutMapping("/{id}")
     public ResponseEntity<ClienteResponseDTO> modificar(
             @PathVariable("id") Long id,
-            @RequestBody ClienteRequestDTO cliente) {
+            @Valid @RequestBody ClienteRequestDTO cliente) {
 
         ClienteResponseDTO actualizado = clienteService.modificar(id, cliente);
 
