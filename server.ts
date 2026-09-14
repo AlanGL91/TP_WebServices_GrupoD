@@ -1,8 +1,8 @@
 import express, { Request, Response } from 'express';
 import cors from 'cors';
 import path from 'path';
-import net from 'net';
 import { createServer as createViteServer } from 'vite';
+import { dbConfig, testDbConnection, getUsuariosFromDb, isDbConnected } from './database';
 
 const app = express();
 const PORT = 3000;
@@ -409,8 +409,38 @@ app.post('/api/clientes', (req: Request, res: Response) => {
 });
 
 // LISTADO: GET /api/clientes
-app.get('/api/clientes', (req: Request, res: Response) => {
+app.get('/api/clientes', async (req: Request, res: Response) => {
   const { activosSolo } = req.query;
+
+  // Si MySQL está conectado, leemos directamente todos los usuarios y clientes reales de la base de datos
+  if (isDbConnected()) {
+    try {
+      const dbUsers = await getUsuariosFromDb();
+      if (dbUsers && dbUsers.length > 0) {
+        let clientesMapeados = dbUsers.map((u, idx) => ({
+          id: u.id_cliente || u.id_usuario,
+          usuarioId: u.id_usuario,
+          documento: u.cod_documento || `DOC-${u.id_usuario}`,
+          nombre: u.nom_nombre || u.desc_email.split('@')[0],
+          apellido: u.desc_apellido || (u.desc_rol === 'ADMIN' ? '(Admin)' : ''),
+          email: u.desc_email,
+          telefono: u.desc_telefono || '-',
+          fechaNacimiento: '',
+          activo: Boolean(u.flag_activo),
+          rol: u.desc_rol,
+        }));
+
+        if (activosSolo === 'true') {
+          clientesMapeados = clientesMapeados.filter((c) => c.activo);
+        }
+        return res.json(clientesMapeados);
+      }
+    } catch (err: any) {
+      console.error('[MySQL Error] Error leyendo de lk_usuarios:', err.message);
+    }
+  }
+
+  // Modo fallback / memoria si aún no cargó MySQL
   let resultado = [...clientes];
   if (activosSolo === 'true') {
     resultado = resultado.filter((c) => c.activo);
@@ -674,52 +704,9 @@ app.get('/api/docs/spec', (req: Request, res: Response) => {
   });
 });
 
-// --- MYSQL CONNECTION VERIFIER (PUERTO 3306) ---
-function checkMySQLConnection(host = '127.0.0.1', port = 3306, timeoutMs = 1500): Promise<{ ok: boolean; message: string }> {
-  return new Promise((resolve) => {
-    const socket = new net.Socket();
-    let isResolved = false;
-
-    socket.setTimeout(timeoutMs);
-
-    socket.once('connect', () => {
-      isResolved = true;
-      socket.destroy();
-      resolve({
-        ok: true,
-        message: `Servicio MySQL activo y respondiendo en ${host}:${port} (Base de datos: 'Rentar')`,
-      });
-    });
-
-    socket.once('timeout', () => {
-      if (!isResolved) {
-        isResolved = true;
-        socket.destroy();
-        resolve({
-          ok: false,
-          message: `Tiempo de espera agotado intentando conectar a MySQL en ${host}:${port}`,
-        });
-      }
-    });
-
-    socket.once('error', (err: any) => {
-      if (!isResolved) {
-        isResolved = true;
-        socket.destroy();
-        resolve({
-          ok: false,
-          message: `No se pudo conectar a MySQL en ${host}:${port} (${err.code || err.message})`,
-        });
-      }
-    });
-
-    socket.connect(port, host);
-  });
-}
-
 // Endpoint para consultar el estado de conexión a MySQL desde la UI o terminal
 app.get('/api/health/mysql', async (_req: Request, res: Response) => {
-  const result = await checkMySQLConnection();
+  const result = await testDbConnection();
   res.status(result.ok ? 200 : 503).json(result);
 });
 
@@ -744,13 +731,20 @@ async function startServer() {
     console.log(`🚀 [Rentar Web] Servidor activo en http://localhost:${PORT}`);
     console.log(`----------------------------------------------------------------`);
     
-    // Verificación de conexión a MySQL
-    const dbStatus = await checkMySQLConnection();
+    // Verificación de conexión a la base de datos MySQL (rentar_db)
+    const dbStatus = await testDbConnection();
     if (dbStatus.ok) {
       console.log(`✅ [MYSQL CONECTADO]: ${dbStatus.message}`);
+      console.log(`📂 [BASE DE DATOS ACTIVA]: '${dbStatus.database || dbConfig.database}'`);
+      try {
+        const users = await getUsuariosFromDb();
+        console.log(`👥 [USUARIOS DETECTADOS EN lk_usuarios]: ${users.length} registros`);
+      } catch (err: any) {
+        console.log(`ℹ️ [TABLA lk_usuarios]: Aún no creada o sin datos (${err.message})`);
+      }
     } else {
       console.log(`⚠️  [MYSQL NO DETECTADO]: ${dbStatus.message}`);
-      console.log(`   👉 Recuerda iniciar MySQL en tu Mac (ej: MySQL Workbench o 'brew services start mysql')`);
+      console.log(`   👉 Servidor MySQL esperado en: ${dbConfig.host}:${dbConfig.port}, base: '${dbConfig.database}', usuario: '${dbConfig.user}'`);
       console.log(`   ℹ️  La aplicación web funcionará en modo emulación para pruebas.`);
     }
     console.log(`================================================================\n`);
