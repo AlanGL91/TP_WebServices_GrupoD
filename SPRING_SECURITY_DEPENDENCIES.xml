@@ -1,0 +1,16 @@
+<!-- ======================================================= -->
+<!-- DEPENDENCIAS A AGREGAR EN TU pom.xml DE SPRING BOOT     -->
+<!-- ======================================================= -->
+
+<!-- 1. Spring Security Starter -->
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-security</artifactId>
+</dependency>
+
+<!-- 2. Testing de Spring Security (Opcional pero recomendado) -->
+<dependency>
+    <groupId>org.springframework.security</groupId>
+    <artifactId>spring-security-test</artifactId>
+    <scope>test</scope>
+</dependency>
