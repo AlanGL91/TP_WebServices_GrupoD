@@ -9,6 +9,7 @@ interface ReservasViewProps {
   loading: boolean;
   onRefresh: () => void;
   onNotification: (msg: string, type?: 'success' | 'error') => void;
+  currentUser?: import('../types').UserSession;
 }
 
 export const ReservasView: React.FC<ReservasViewProps> = ({
@@ -18,8 +19,10 @@ export const ReservasView: React.FC<ReservasViewProps> = ({
   loading,
   onRefresh,
   onNotification,
+  currentUser,
 }) => {
   const [showModal, setShowModal] = useState(false);
+  const isAdmin = currentUser?.rol === 'ADMIN';
 
   // Form State
   const [clienteId, setClienteId] = useState<string>('');
@@ -48,10 +51,19 @@ export const ReservasView: React.FC<ReservasViewProps> = ({
   const estimatedTotal = selectedVehiculo ? calculatedDays * selectedVehiculo.precio_diario : 0;
 
   const handleOpenCreate = () => {
-    if (activeClients.length > 0) setClienteId(String(activeClients[0].id));
+    if (!isAdmin && currentUser?.clienteId) {
+      setClienteId(String(currentUser.clienteId));
+    } else if (activeClients.length > 0) {
+      setClienteId(String(activeClients[0].id));
+    }
     if (availableVehicles.length > 0) setVehiculoId(String(availableVehicles[0].id));
     setShowModal(true);
   };
+
+  // Filter reservations: If client, only show their own reservations. If admin, show all.
+  const displayedReservas = isAdmin
+    ? reservas
+    : reservas.filter((r) => r.clienteId === currentUser?.clienteId);
 
   const handleCreateReserva = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -179,15 +191,15 @@ export const ReservasView: React.FC<ReservasViewProps> = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {reservas.length === 0 ? (
+              {displayedReservas.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="text-center py-12 text-slate-400">
                     <Calendar className="w-8 h-8 mx-auto mb-2 text-slate-300" />
-                    No hay reservas registradas.
+                    {isAdmin ? 'No hay reservas registradas.' : 'No tienes reservas registradas actualmente.'}
                   </td>
                 </tr>
               ) : (
-                reservas.map((r) => (
+                displayedReservas.map((r) => (
                   <tr key={r.id} id={`reserva-row-${r.id}`} className="hover:bg-slate-50/70 transition-colors">
                     <td className="px-6 py-4">
                       <div className="font-bold text-slate-900">#{r.id}</div>
@@ -253,8 +265,9 @@ export const ReservasView: React.FC<ReservasViewProps> = ({
                 <select
                   id="select-reserva-cliente"
                   value={clienteId}
+                  disabled={!isAdmin}
                   onChange={(e) => setClienteId(e.target.value)}
-                  className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-100 disabled:text-slate-500"
                   required
                 >
                   {activeClients.map((c) => (
@@ -263,6 +276,11 @@ export const ReservasView: React.FC<ReservasViewProps> = ({
                     </option>
                   ))}
                 </select>
+                {!isAdmin && (
+                  <span className="text-[11px] text-slate-400 mt-1 block">
+                    Reserva asignada automáticamente a tu perfil de cliente.
+                  </span>
+                )}
               </div>
 
               <div>

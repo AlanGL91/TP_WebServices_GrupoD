@@ -4,10 +4,12 @@ import { VehiculosView } from './components/VehiculosView';
 import { ClientesView } from './components/ClientesView';
 import { ReservasView } from './components/ReservasView';
 import { ApiExplorerView } from './components/ApiExplorerView';
-import { Vehiculo, Cliente, Reserva } from './types';
-import { Car, Users, CalendarCheck, CheckCircle2, AlertCircle, Sparkles } from 'lucide-react';
+import { LoginView } from './components/LoginView';
+import { Vehiculo, Cliente, Reserva, UserSession } from './types';
+import { Car, Users, CalendarCheck, CheckCircle2, AlertCircle, ShieldAlert } from 'lucide-react';
 
 export default function App() {
+  const [currentUser, setCurrentUser] = useState<UserSession | null>(null);
   const [currentTab, setCurrentTab] = useState<'vehiculos' | 'clientes' | 'reservas' | 'api'>('vehiculos');
   const [vehiculos, setVehiculos] = useState<Vehiculo[]>([]);
   const [clientes, setClientes] = useState<Cliente[]>([]);
@@ -57,17 +59,47 @@ export default function App() {
   };
 
   useEffect(() => {
-    loadData();
-  }, []);
+    if (currentUser) {
+      loadData();
+    }
+  }, [currentUser]);
 
+  const handleLoginSuccess = (user: UserSession) => {
+    setCurrentUser(user);
+    // Si el usuario es CLIENTE, iniciar directamente en la pestaña de vehículos
+    setCurrentTab('vehiculos');
+    showToast(`Bienvenido/a, ${user.nombre || user.email}! Perfil: ${user.rol}`);
+  };
+
+  const handleLogout = () => {
+    setCurrentUser(null);
+    setCurrentTab('vehiculos');
+    showToast('Sesión cerrada correctamente');
+  };
+
+  // PANTALLA DE LOGIN POR DEFECTO SI NO ESTÁ AUTENTICADO
+  if (!currentUser) {
+    return <LoginView onLoginSuccess={handleLoginSuccess} />;
+  }
+
+  const isAdmin = currentUser.rol === 'ADMIN';
   const totalVehiculos = vehiculos.length;
   const disponibles = vehiculos.filter((v) => v.activo && v.estado === 'DISPONIBLE').length;
   const totalClientes = clientes.filter((c) => c.activo).length;
-  const reservasActivas = reservas.filter((r) => r.estado === 'CONFIRMADA').length;
+  const userReservas = isAdmin
+    ? reservas
+    : reservas.filter((r) => r.clienteId === currentUser.clienteId);
+  const reservasActivas = userReservas.filter((r) => r.estado === 'CONFIRMADA').length;
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
-      <Navbar currentTab={currentTab} onSelectTab={setCurrentTab} serverStatus={serverStatus} />
+      <Navbar
+        currentTab={currentTab}
+        onSelectTab={setCurrentTab}
+        serverStatus={serverStatus}
+        currentUser={currentUser}
+        onLogout={handleLogout}
+      />
 
       {/* Toast Notification */}
       {toast && (
@@ -90,6 +122,30 @@ export default function App() {
 
       {/* Main Container */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+        {/* Banner informativo de perfil activo */}
+        <div
+          id="active-profile-banner"
+          className={`p-3.5 rounded-xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs ${
+            isAdmin
+              ? 'bg-blue-50 border-blue-200 text-blue-900'
+              : 'bg-emerald-50 border-emerald-200 text-emerald-900'
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            <span className="font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-white/80 border border-current">
+              Perfil: {currentUser.rol}
+            </span>
+            <span>
+              {isAdmin
+                ? 'Permisos activos: ABM completo de Clientes, Vehículos y Reservas.'
+                : 'Permisos activos: Consulta de Vehículos y Gestión de Reservas propias.'}
+            </span>
+          </div>
+          <span className="font-mono text-[11px] text-slate-500">
+            Sesión: {currentUser.email}
+          </span>
+        </div>
+
         {/* KPI Overview Metrics */}
         <section id="metrics-overview" className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs">
@@ -118,22 +174,40 @@ export default function App() {
             </div>
           </div>
 
-          <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Clientes Activos</span>
-              <div className="p-2 bg-purple-50 text-purple-600 rounded-lg">
-                <Users className="w-4 h-4" />
+          {isAdmin ? (
+            <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Clientes Activos</span>
+                <div className="p-2 bg-purple-50 text-purple-600 rounded-lg">
+                  <Users className="w-4 h-4" />
+                </div>
+              </div>
+              <div className="mt-2 flex items-baseline gap-2">
+                <span className="text-2xl font-bold text-slate-900">{totalClientes}</span>
+                <span className="text-xs text-slate-500">registrados</span>
               </div>
             </div>
-            <div className="mt-2 flex items-baseline gap-2">
-              <span className="text-2xl font-bold text-slate-900">{totalClientes}</span>
-              <span className="text-xs text-slate-500">registrados</span>
+          ) : (
+            <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Mi Perfil</span>
+                <div className="p-2 bg-purple-50 text-purple-600 rounded-lg">
+                  <Users className="w-4 h-4" />
+                </div>
+              </div>
+              <div className="mt-2 flex items-baseline gap-2">
+                <span className="text-lg font-bold text-slate-900 truncate max-w-[150px]">
+                  {currentUser.nombre || 'Cliente'}
+                </span>
+              </div>
             </div>
-          </div>
+          )}
 
           <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Reservas Activas</span>
+              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                {isAdmin ? 'Reservas Activas' : 'Mis Reservas'}
+              </span>
               <div className="p-2 bg-amber-50 text-amber-600 rounded-lg">
                 <CalendarCheck className="w-4 h-4" />
               </div>
@@ -152,16 +226,33 @@ export default function App() {
             loading={loading}
             onRefresh={loadData}
             onNotification={showToast}
+            isAdmin={isAdmin}
           />
         )}
 
         {currentTab === 'clientes' && (
-          <ClientesView
-            clientes={clientes}
-            loading={loading}
-            onRefresh={loadData}
-            onNotification={showToast}
-          />
+          isAdmin ? (
+            <ClientesView
+              clientes={clientes}
+              loading={loading}
+              onRefresh={loadData}
+              onNotification={showToast}
+            />
+          ) : (
+            <div className="bg-white p-12 text-center rounded-2xl border border-slate-200 shadow-2xs">
+              <ShieldAlert className="w-12 h-12 text-red-500 mx-auto mb-3" />
+              <h2 className="text-lg font-bold text-slate-900">Acceso No Autorizado (HTTP 403 Forbidden)</h2>
+              <p className="text-sm text-slate-500 mt-1 max-w-md mx-auto">
+                El perfil CLIENTE no tiene permisos para acceder al módulo de gestión y ABM de clientes. Esta vista está restringida para el rol ROLE_ADMIN.
+              </p>
+              <button
+                onClick={() => setCurrentTab('vehiculos')}
+                className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+              >
+                Volver a Catálogo de Vehículos
+              </button>
+            </div>
+          )
         )}
 
         {currentTab === 'reservas' && (
@@ -172,6 +263,7 @@ export default function App() {
             loading={loading}
             onRefresh={loadData}
             onNotification={showToast}
+            currentUser={currentUser}
           />
         )}
 
@@ -187,7 +279,7 @@ export default function App() {
             <span>Trabajo Práctico Web Services — Grupo D · C2 · 2026 · UNLa</span>
           </div>
           <div className="flex items-center gap-3">
-            <span className="px-2 py-0.5 rounded bg-slate-100 font-mono text-slate-600">REST API & Swagger</span>
+            <span className="px-2 py-0.5 rounded bg-slate-100 font-mono text-slate-600">Spring Security FormLogin + RBAC</span>
             <span>Node.js 22 + Express + React</span>
           </div>
         </div>

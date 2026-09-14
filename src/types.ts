@@ -1,3 +1,13 @@
+export type Role = 'ADMIN' | 'CLIENTE';
+
+export interface UserSession {
+  id: number;
+  email: string;
+  rol: Role;
+  nombre?: string;
+  clienteId?: number;
+}
+
 export type TipoVehiculo = 'SEDAN' | 'SUV' | 'PICKUP' | 'COUPE' | 'HATCHBACK';
 export type EstadoVehiculo = 'DISPONIBLE' | 'RESERVADO' | 'EN_ALQUILER';
 

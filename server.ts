@@ -14,8 +14,10 @@ export interface Usuario {
   id: number;
   email: string;
   passwordHash: string;
-  rol: string;
+  rol: 'ADMIN' | 'CLIENTE';
   activo: boolean;
+  nombre?: string;
+  clienteId?: number;
 }
 
 export interface Cliente {
@@ -60,15 +62,16 @@ export interface Reserva {
   estado: 'CONFIRMADA' | 'CANCELADA' | 'FINALIZADA';
 }
 
-let nextUsuarioId = 4;
+let nextUsuarioId = 5;
 let nextClienteId = 4;
 let nextVehiculoId = 6;
 let nextReservaId = 3;
 
 const usuarios: Usuario[] = [
-  { id: 1, email: 'juan.perez@example.com', passwordHash: 'a7b9c1d2', rol: 'CLIENTE', activo: true },
-  { id: 2, email: 'maria.gonzalez@example.com', passwordHash: 'f4e3d2c1', rol: 'CLIENTE', activo: true },
-  { id: 3, email: 'carlos.rodriguez@example.com', passwordHash: '98765432', rol: 'CLIENTE', activo: true },
+  { id: 1, email: 'admin@rentar.com', passwordHash: 'Admin123*', rol: 'ADMIN', activo: true, nombre: 'Administrador UNLa' },
+  { id: 2, email: 'juan.perez@example.com', passwordHash: 'Cliente123*', rol: 'CLIENTE', activo: true, nombre: 'Juan Pérez', clienteId: 1 },
+  { id: 3, email: 'maria.gonzalez@example.com', passwordHash: 'Cliente123*', rol: 'CLIENTE', activo: true, nombre: 'María González', clienteId: 2 },
+  { id: 4, email: 'carlos.rodriguez@example.com', passwordHash: 'Cliente123*', rol: 'CLIENTE', activo: true, nombre: 'Carlos Rodríguez', clienteId: 3 },
 ];
 
 const clientes: Cliente[] = [
@@ -212,6 +215,38 @@ app.get('/api/health', (req: Request, res: Response) => {
     app: 'rentar',
     version: '1.0.0',
     entorno: 'Node.js 22 Express (Migrado desde Spring Boot UNLa Grupo D)',
+  });
+});
+
+// ========================
+// AUTH CONTROLLER (SPRING SECURITY EQUIVALENT)
+// ========================
+app.post('/api/auth/login', (req: Request, res: Response) => {
+  const { email, password } = req.body;
+
+  if (!email || !password) {
+    return res.status(400).json({ error: 'Debe ingresar email y contraseña' });
+  }
+
+  const user = usuarios.find((u) => u.email.toLowerCase() === email.trim().toLowerCase());
+
+  if (!user || user.passwordHash !== password) {
+    return res.status(401).json({ error: 'Credenciales inválidas. Compruebe el usuario y la contraseña.' });
+  }
+
+  if (!user.activo) {
+    return res.status(403).json({ error: 'Su cuenta se encuentra inactiva. Contacte al administrador.' });
+  }
+
+  return res.json({
+    mensaje: 'Autenticación exitosa',
+    user: {
+      id: user.id,
+      email: user.email,
+      rol: user.rol,
+      nombre: user.nombre || user.email,
+      clienteId: user.clienteId,
+    },
   });
 });
 

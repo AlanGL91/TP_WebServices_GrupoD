@@ -7,6 +7,7 @@ interface VehiculosViewProps {
   loading: boolean;
   onRefresh: () => void;
   onNotification: (msg: string, type?: 'success' | 'error') => void;
+  isAdmin?: boolean;
 }
 
 export const VehiculosView: React.FC<VehiculosViewProps> = ({
@@ -14,6 +15,7 @@ export const VehiculosView: React.FC<VehiculosViewProps> = ({
   loading,
   onRefresh,
   onNotification,
+  isAdmin = true,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [tipoFilter, setTipoFilter] = useState<string>('TODOS');
@@ -171,14 +173,16 @@ export const VehiculosView: React.FC<VehiculosViewProps> = ({
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
           </button>
-          <button
-            id="btn-nuevo-vehiculo"
-            onClick={handleOpenCreate}
-            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-xs transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Nuevo Vehículo</span>
-          </button>
+          {isAdmin && (
+            <button
+              id="btn-nuevo-vehiculo"
+              onClick={handleOpenCreate}
+              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-xs transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Nuevo Vehículo</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -286,26 +290,30 @@ export const VehiculosView: React.FC<VehiculosViewProps> = ({
                     </td>
                     <td className="px-6 py-4">{getStatusBadge(v.estado, v.activo)}</td>
                     <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        <button
-                          id={`btn-edit-vehiculo-${v.id}`}
-                          onClick={() => handleOpenEdit(v)}
-                          className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
-                          title="Modificar vehículo"
-                        >
-                          <Edit2 className="w-4 h-4" />
-                        </button>
-                        {v.activo && (
+                      {isAdmin ? (
+                        <div className="flex items-center justify-end gap-1">
                           <button
-                            id={`btn-delete-vehiculo-${v.id}`}
-                            onClick={() => handleDelete(v.id)}
-                            className="p-1.5 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
-                            title="Baja lógica"
+                            id={`btn-edit-vehiculo-${v.id}`}
+                            onClick={() => handleOpenEdit(v)}
+                            className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+                            title="Modificar vehículo"
                           >
-                            <Trash2 className="w-4 h-4" />
+                            <Edit2 className="w-4 h-4" />
                           </button>
-                        )}
-                      </div>
+                          {v.activo && (
+                            <button
+                              id={`btn-delete-vehiculo-${v.id}`}
+                              onClick={() => handleDelete(v.id)}
+                              className="p-1.5 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                              title="Baja lógica"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-xs text-slate-400 italic">Solo lectura</span>
+                      )}
                     </td>
                   </tr>
                 ))
