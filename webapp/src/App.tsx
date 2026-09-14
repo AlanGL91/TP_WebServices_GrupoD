@@ -16,6 +16,7 @@ export default function App() {
   const [reservas, setReservas] = useState<Reserva[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [serverStatus, setServerStatus] = useState<boolean>(false);
+  const [mysqlStatus, setMysqlStatus] = useState<{ ok: boolean; message: string } | null>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
@@ -28,11 +29,12 @@ export default function App() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [vRes, cRes, rRes, hRes] = await Promise.all([
+      const [vRes, cRes, rRes, hRes, mRes] = await Promise.all([
         fetch('/api/vehiculos'),
         fetch('/api/clientes'),
         fetch('/api/reservas'),
         fetch('/api/health'),
+        fetch('/api/health/mysql'),
       ]);
 
       if (vRes.ok) {
@@ -49,6 +51,10 @@ export default function App() {
       }
       if (hRes.ok) {
         setServerStatus(true);
+      }
+      if (mRes) {
+        const mData = await mRes.json();
+        setMysqlStatus(mData);
       }
     } catch (err) {
       console.error('Error fetching data:', err);
@@ -97,6 +103,7 @@ export default function App() {
         currentTab={currentTab}
         onSelectTab={setCurrentTab}
         serverStatus={serverStatus}
+        mysqlStatus={mysqlStatus}
         currentUser={currentUser}
         onLogout={handleLogout}
       />

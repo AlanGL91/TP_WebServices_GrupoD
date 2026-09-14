@@ -1,11 +1,12 @@
 import React from 'react';
-import { Car, Users, CalendarCheck, Code2, LogOut, ShieldCheck, User } from 'lucide-react';
+import { Car, Users, CalendarCheck, Code2, LogOut, ShieldCheck, User, Database } from 'lucide-react';
 import { UserSession } from '../types';
 
 interface NavbarProps {
   currentTab: 'vehiculos' | 'clientes' | 'reservas' | 'api';
   onSelectTab: (tab: 'vehiculos' | 'clientes' | 'reservas' | 'api') => void;
   serverStatus: boolean;
+  mysqlStatus?: { ok: boolean; message: string } | null;
   currentUser: UserSession;
   onLogout: () => void;
 }
@@ -14,6 +15,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   currentTab,
   onSelectTab,
   serverStatus,
+  mysqlStatus,
   currentUser,
   onLogout,
 }) => {
@@ -96,6 +98,22 @@ export const Navbar: React.FC<NavbarProps> = ({
           </nav>
 
           <div className="flex items-center gap-3">
+            {/* MySQL Status Indicator */}
+            {mysqlStatus && (
+              <div
+                id="mysql-status-badge"
+                title={mysqlStatus.message}
+                className={`hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold border ${
+                  mysqlStatus.ok
+                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                    : 'bg-amber-50 text-amber-800 border-amber-200'
+                }`}
+              >
+                <Database className="w-3.5 h-3.5" />
+                <span>{mysqlStatus.ok ? 'MySQL: Conectado' : 'MySQL: No detectado'}</span>
+              </div>
+            )}
+
             {/* User Profile Pill */}
             <div id="user-profile-badge" className="flex items-center gap-2 px-2.5 py-1 rounded-xl bg-slate-100 border border-slate-200 text-xs">
               {isAdmin ? (
