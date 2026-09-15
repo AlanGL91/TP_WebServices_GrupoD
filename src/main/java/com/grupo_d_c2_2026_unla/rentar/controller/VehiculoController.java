@@ -8,6 +8,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/vehiculos")
 public class VehiculoController {
@@ -44,5 +46,12 @@ public class VehiculoController {
     public ResponseEntity<VehiculoResponseDTO> buscarPorId(@PathVariable Integer id) {
         VehiculoResponseDTO encontrado = vehiculoService.buscarPorId(id);
         return ResponseEntity.ok(encontrado);
+    }
+
+    // LISTAR VEHICULOS
+    @GetMapping
+    public ResponseEntity<List<VehiculoResponseDTO>> listarTodos() {
+        List<VehiculoResponseDTO> vehiculos = vehiculoService.listarTodos();
+        return ResponseEntity.ok(vehiculos);
     }
 }
