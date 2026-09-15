@@ -10,7 +10,7 @@ Sistema web para la gestión integral de alquiler de vehículos, desarrollado co
 
 1. **Aplicación Web Interactiva (Full-Stack):** React 18, TypeScript, Vite, Tailwind CSS y Node.js/Express, con persistencia en MySQL y soporte fallback en memoria.
 2. **Backend de Servicios (Spring Boot):** Java 21 con Spring Boot, Spring Data JPA, Spring Security, APIs REST y GraphQL documentadas en Swagger/OpenAPI.
-3. **Base de Datos Relacional (MySQL):** Esquema `rentar_db` con tablas de dimensiones (`lk_usuarios`, `lk_clientes`, `lk_vehiculo`, `lk_tiempo`) y tabla de hechos (`hecho_alquiler`).
+3. **Base de Datos Relacional (MySQL):** Esquema `rentar_db` con tablas de dimensiones (`lk_usuarios`, `lk_clientes`, `lk_vehiculo`, `lk_tiempo`) y tabla de hechos (`ft_reservas`).
 
 ---
 
