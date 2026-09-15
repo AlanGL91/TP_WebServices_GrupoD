@@ -1,5 +1,6 @@
 package com.grupo_d_c2_2026_unla.rentar.entity;
 
+import com.grupo_d_c2_2026_unla.rentar.enums.EstadoReserva;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -46,8 +47,9 @@ public class Reserva {
     @Column(name = "f_val_importe_total", nullable = false, precision = 12, scale = 2)
     private BigDecimal importeTotal;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "desc_estado_reserva", nullable = false, length = 50)
-    private String estadoReserva;
+    private EstadoReserva estadoReserva;
 
 
 }
