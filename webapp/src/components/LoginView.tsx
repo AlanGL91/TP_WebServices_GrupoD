@@ -8,6 +8,7 @@ import {
   UserCheck,
   Car,
   ArrowRight,
+  ArrowLeft,
   UserPlus,
   RotateCcw,
   CheckCircle2,
@@ -212,57 +213,8 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
 
       <div className="mt-6 sm:mx-auto sm:w-full sm:max-w-md relative z-10 px-4">
         <div className="bg-white py-6 px-6 shadow-2xl rounded-2xl sm:px-8 border border-slate-100">
-          
-          {/* Selector de modo: Iniciar Sesión / Alta / Cambiar Pass */}
-          <div className="grid grid-cols-3 gap-1 p-1 bg-slate-100 rounded-xl mb-6 text-xs font-semibold text-slate-600">
-            <button
-              type="button"
-              id="tab-mode-login"
-              onClick={() => {
-                setMode('login');
-                resetMessages();
-              }}
-              className={`py-2 px-1 rounded-lg text-center transition-all cursor-pointer ${
-                mode === 'login'
-                  ? 'bg-white text-blue-700 shadow-xs font-bold'
-                  : 'hover:text-slate-900'
-              }`}
-            >
-              Iniciar Sesión
-            </button>
-            <button
-              type="button"
-              id="tab-mode-register"
-              onClick={() => {
-                setMode('register');
-                resetMessages();
-              }}
-              className={`py-2 px-1 rounded-lg text-center transition-all cursor-pointer ${
-                mode === 'register'
-                  ? 'bg-white text-blue-700 shadow-xs font-bold'
-                  : 'hover:text-slate-900'
-              }`}
-            >
-              Dar de Alta
-            </button>
-            <button
-              type="button"
-              id="tab-mode-password"
-              onClick={() => {
-                setMode('cambiar-password');
-                resetMessages();
-              }}
-              className={`py-2 px-1 rounded-lg text-center transition-all cursor-pointer ${
-                mode === 'cambiar-password'
-                  ? 'bg-white text-blue-700 shadow-xs font-bold'
-                  : 'hover:text-slate-900'
-              }`}
-            >
-              Cambiar Pass
-            </button>
-          </div>
 
-          {/* Mensajes de feedback */}
+          {/* Mensajes de error / éxito */}
           {error && (
             <div
               id="auth-error-alert"
@@ -290,14 +242,14 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
           )}
 
           {/* ======================================================== */}
-          {/* MODO 1: INICIAR SESIÓN                                   */}
+          {/* VISTA PRINCIPAL: INICIAR SESIÓN                           */}
           {/* ======================================================== */}
           {mode === 'login' && (
             <div>
               <div className="mb-4">
-                <h2 className="text-lg font-bold text-slate-900">Acceso al Sistema</h2>
+                <h2 className="text-lg font-bold text-slate-900">Iniciar Sesión</h2>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Ingrese con sus credenciales de la base de datos o cuentas de prueba.
+                  Ingrese con sus credenciales registradas en el sistema.
                 </p>
               </div>
 
@@ -331,13 +283,14 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
                     </label>
                     <button
                       type="button"
+                      id="link-olvidaste-password"
                       onClick={() => {
                         setMode('cambiar-password');
                         resetMessages();
                       }}
                       className="text-xs font-medium text-blue-600 hover:text-blue-700 hover:underline cursor-pointer"
                     >
-                      ¿Olvidaste o quieres cambiarla?
+                      ¿Olvidaste o querés cambiar tu contraseña?
                     </button>
                   </div>
                   <div className="relative rounded-lg">
@@ -368,15 +321,32 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
                     <span>Verificando credenciales...</span>
                   ) : (
                     <>
-                      <span>Ingresar</span>
+                      <span>Iniciar Sesión</span>
                       <ArrowRight className="w-4 h-4" />
                     </>
                   )}
                 </button>
               </form>
 
+              {/* Botón para dar de alta / registro */}
+              <div className="mt-4 pt-4 border-t border-slate-100 flex items-center justify-between text-xs">
+                <span className="text-slate-600">¿No posee una cuenta registrada?</span>
+                <button
+                  type="button"
+                  id="btn-switch-register"
+                  onClick={() => {
+                    setMode('register');
+                    resetMessages();
+                  }}
+                  className="font-semibold text-blue-600 hover:text-blue-700 hover:underline flex items-center gap-1 cursor-pointer"
+                >
+                  <UserPlus className="w-3.5 h-3.5" />
+                  Crear una cuenta
+                </button>
+              </div>
+
               {/* Perfiles de prueba precargados */}
-              <div className="mt-5 pt-4 border-t border-slate-100">
+              <div className="mt-4 pt-4 border-t border-slate-100">
                 <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 block mb-2 text-center">
                   Perfiles rápidos de prueba
                 </span>
@@ -435,14 +405,26 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
           )}
 
           {/* ======================================================== */}
-          {/* MODO 2: DAR DE ALTA USUARIO                              */}
+          {/* MODO: ALTA DE USUARIO                                    */}
           {/* ======================================================== */}
           {mode === 'register' && (
             <div>
+              <button
+                type="button"
+                onClick={() => {
+                  setMode('login');
+                  resetMessages();
+                }}
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-700 mb-3 cursor-pointer"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                Volver a Iniciar Sesión
+              </button>
+
               <div className="mb-4">
-                <h2 className="text-lg font-bold text-slate-900">Alta de Nuevo Usuario</h2>
+                <h2 className="text-lg font-bold text-slate-900">Crear una Cuenta</h2>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Crea una nueva cuenta que se almacenará en la tabla <code className="bg-slate-100 px-1 py-0.5 rounded font-mono text-slate-700">lk_usuarios</code>.
+                  Complete los datos personales para registrar su usuario en el sistema.
                 </p>
               </div>
 
@@ -616,23 +598,48 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
                   ) : (
                     <>
                       <UserPlus className="w-4 h-4" />
-                      <span>Dar de Alta Usuario</span>
+                      <span>Registrar Cuenta</span>
                     </>
                   )}
                 </button>
               </form>
+
+              <div className="mt-3 text-center">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMode('login');
+                    resetMessages();
+                  }}
+                  className="text-xs text-slate-500 hover:text-slate-700 hover:underline cursor-pointer"
+                >
+                  ¿Ya posee una cuenta registrada? Iniciar sesión
+                </button>
+              </div>
             </div>
           )}
 
           {/* ======================================================== */}
-          {/* MODO 3: CAMBIAR CONTRASEÑA                               */}
+          {/* MODO: CAMBIAR CONTRASEÑA                                 */}
           {/* ======================================================== */}
           {mode === 'cambiar-password' && (
             <div>
+              <button
+                type="button"
+                onClick={() => {
+                  setMode('login');
+                  resetMessages();
+                }}
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-700 mb-3 cursor-pointer"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                Volver a Iniciar Sesión
+              </button>
+
               <div className="mb-4">
                 <h2 className="text-lg font-bold text-slate-900">Cambiar Contraseña</h2>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Actualiza el hash encriptado con BCrypt en <code className="bg-slate-100 px-1 py-0.5 rounded font-mono text-slate-700">desc_password_hash</code>.
+                  Ingrese su correo y la nueva contraseña para actualizar su credencial.
                 </p>
               </div>
 
@@ -659,7 +666,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
 
                 <div>
                   <label htmlFor="pwd-actual" className="block text-xs font-semibold text-slate-700 mb-1">
-                    Contraseña Actual (opcional si es blanqueo de administrador)
+                    Contraseña Actual (opcional si es blanqueo)
                   </label>
                   <div className="relative rounded-lg">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
@@ -732,6 +739,19 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
                   )}
                 </button>
               </form>
+
+              <div className="mt-3 text-center">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMode('login');
+                    resetMessages();
+                  }}
+                  className="text-xs text-slate-500 hover:text-slate-700 hover:underline cursor-pointer"
+                >
+                  Volver al inicio de sesión
+                </button>
+              </div>
             </div>
           )}
 
