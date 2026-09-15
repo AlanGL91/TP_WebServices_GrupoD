@@ -2,7 +2,17 @@ import express, { Request, Response } from 'express';
 import cors from 'cors';
 import path from 'path';
 import { createServer as createViteServer } from 'vite';
-import { dbConfig, testDbConnection, getUsuariosFromDb, isDbConnected } from './database';
+import {
+  dbConfig,
+  testDbConnection,
+  getUsuariosFromDb,
+  isDbConnected,
+  findUsuarioByEmail,
+  createUsuarioInDb,
+  updatePasswordInDb,
+  hashPassword,
+  verifyPassword,
+} from './database';
 
 const app = express();
 const PORT = 3000;
@@ -222,16 +232,60 @@ app.get('/api/health', (req: Request, res: Response) => {
 // ========================
 // AUTH CONTROLLER (SPRING SECURITY EQUIVALENT)
 // ========================
-app.post('/api/auth/login', (req: Request, res: Response) => {
+app.post('/api/auth/login', async (req: Request, res: Response) => {
   const { email, password } = req.body;
 
   if (!email || !password) {
     return res.status(400).json({ error: 'Debe ingresar email y contraseña' });
   }
 
-  const user = usuarios.find((u) => u.email.toLowerCase() === email.trim().toLowerCase());
+  const cleanEmail = String(email).trim().toLowerCase();
 
-  if (!user || user.passwordHash !== password) {
+  // 1. Intento de autenticación directa contra MySQL (lk_usuarios) si está conectado
+  if (isDbConnected()) {
+    try {
+      const dbUser = await findUsuarioByEmail(cleanEmail);
+      if (dbUser) {
+        const passwordMatches = await verifyPassword(String(password), dbUser.desc_password_hash || '');
+        if (!passwordMatches) {
+          return res.status(401).json({ error: 'Credenciales inválidas. Compruebe la contraseña ingresada.' });
+        }
+
+        if (!dbUser.flag_activo) {
+          return res.status(403).json({ error: 'Su cuenta se encuentra inactiva. Contacte al administrador.' });
+        }
+
+        const nombreCompleto = dbUser.nom_nombre
+          ? `${dbUser.nom_nombre} ${dbUser.desc_apellido || ''}`.trim()
+          : (dbUser.desc_rol === 'ADMIN' ? 'Administrador' : dbUser.desc_email.split('@')[0]);
+
+        return res.json({
+          mensaje: 'Autenticación exitosa (Base de datos MySQL)',
+          user: {
+            id: dbUser.id_usuario,
+            email: dbUser.desc_email,
+            rol: dbUser.desc_rol,
+            nombre: nombreCompleto,
+            clienteId: dbUser.id_cliente || dbUser.id_usuario,
+            documento: dbUser.cod_documento,
+            telefono: dbUser.desc_telefono,
+          },
+        });
+      }
+    } catch (err: any) {
+      console.error('[MySQL Auth Error]:', err.message);
+    }
+  }
+
+  // 2. Fallback a usuarios en memoria
+  const user = usuarios.find((u) => u.email.toLowerCase() === cleanEmail);
+
+  if (!user) {
+    return res.status(401).json({ error: 'Credenciales inválidas. Compruebe el usuario y la contraseña.' });
+  }
+
+  const matchesMemory = await verifyPassword(String(password), user.passwordHash);
+  if (!matchesMemory) {
     return res.status(401).json({ error: 'Credenciales inválidas. Compruebe el usuario y la contraseña.' });
   }
 
@@ -249,6 +303,159 @@ app.post('/api/auth/login', (req: Request, res: Response) => {
       clienteId: user.clienteId,
     },
   });
+});
+
+// ALTA DE USUARIO: POST /api/auth/register
+app.post('/api/auth/register', async (req: Request, res: Response) => {
+  const { email, password, nombre, apellido, documento, telefono, rol } = req.body;
+
+  if (!email || !password) {
+    return res.status(400).json({ error: 'El correo electrónico y la contraseña son obligatorios.' });
+  }
+
+  if (String(password).length < 4) {
+    return res.status(400).json({ error: 'La contraseña debe tener al menos 4 caracteres.' });
+  }
+
+  const cleanEmail = String(email).trim().toLowerCase();
+  const hashedPassword = await hashPassword(String(password));
+  const userRole = rol === 'ADMIN' ? 'ADMIN' : 'CLIENTE';
+
+  // Si MySQL está conectado, insertamos en la BD real
+  if (isDbConnected()) {
+    try {
+      const existing = await findUsuarioByEmail(cleanEmail);
+      if (existing) {
+        return res.status(400).json({ error: 'Ya existe un usuario registrado con ese email.' });
+      }
+
+      const nuevoId = await createUsuarioInDb({
+        email: cleanEmail,
+        passwordHash: hashedPassword,
+        rol: userRole,
+        nombre: nombre ? String(nombre).trim() : undefined,
+        apellido: apellido ? String(apellido).trim() : undefined,
+        documento: documento ? String(documento).trim() : undefined,
+        telefono: telefono ? String(telefono).trim() : undefined,
+      });
+
+      return res.status(201).json({
+        mensaje: 'Usuario registrado exitosamente en la base de datos MySQL',
+        user: {
+          id: nuevoId,
+          email: cleanEmail,
+          rol: userRole,
+          nombre: nombre ? `${nombre} ${apellido || ''}`.trim() : cleanEmail,
+          clienteId: nuevoId,
+        },
+      });
+    } catch (err: any) {
+      console.error('[MySQL Register Error]:', err.message);
+      return res.status(500).json({ error: `Error al registrar usuario en la base de datos: ${err.message}` });
+    }
+  }
+
+  // Fallback en memoria
+  if (usuarios.some((u) => u.email.toLowerCase() === cleanEmail)) {
+    return res.status(400).json({ error: 'Ya existe un usuario registrado con ese email.' });
+  }
+
+  const nuevoUsuario: Usuario = {
+    id: nextUsuarioId++,
+    email: cleanEmail,
+    passwordHash: hashedPassword,
+    rol: userRole as 'ADMIN' | 'CLIENTE',
+    activo: true,
+    nombre: nombre ? `${nombre} ${apellido || ''}`.trim() : cleanEmail,
+  };
+  usuarios.push(nuevoUsuario);
+
+  if (userRole === 'CLIENTE') {
+    const nuevoCliente: Cliente = {
+      id: nextClienteId++,
+      usuarioId: nuevoUsuario.id,
+      documento: documento ? String(documento).trim() : `DOC-${nuevoUsuario.id}`,
+      nombre: nombre ? String(nombre).trim() : cleanEmail.split('@')[0],
+      apellido: apellido ? String(apellido).trim() : '',
+      email: cleanEmail,
+      telefono: telefono ? String(telefono).trim() : '',
+      fechaNacimiento: '',
+      activo: true,
+    };
+    clientes.push(nuevoCliente);
+    nuevoUsuario.clienteId = nuevoCliente.id;
+  }
+
+  return res.status(201).json({
+    mensaje: 'Usuario registrado exitosamente',
+    user: {
+      id: nuevoUsuario.id,
+      email: nuevoUsuario.email,
+      rol: nuevoUsuario.rol,
+      nombre: nuevoUsuario.nombre,
+      clienteId: nuevoUsuario.clienteId,
+    },
+  });
+});
+
+// CAMBIAR CONTRASEÑA: POST /api/auth/cambiar-password
+app.post('/api/auth/cambiar-password', async (req: Request, res: Response) => {
+  const { email, passwordActual, passwordNueva } = req.body;
+
+  if (!email || !passwordNueva) {
+    return res.status(400).json({ error: 'Debe ingresar el email y la nueva contraseña.' });
+  }
+
+  if (String(passwordNueva).length < 4) {
+    return res.status(400).json({ error: 'La nueva contraseña debe tener al menos 4 caracteres.' });
+  }
+
+  const cleanEmail = String(email).trim().toLowerCase();
+  const newHash = await hashPassword(String(passwordNueva));
+
+  // 1. Si MySQL está conectado
+  if (isDbConnected()) {
+    try {
+      const dbUser = await findUsuarioByEmail(cleanEmail);
+      if (!dbUser) {
+        return res.status(404).json({ error: 'No se encontró ningún usuario con ese email en la base de datos.' });
+      }
+
+      // Si el usuario proporcionó su contraseña actual, la verificamos
+      if (passwordActual) {
+        const matches = await verifyPassword(String(passwordActual), dbUser.desc_password_hash || '');
+        if (!matches) {
+          return res.status(401).json({ error: 'La contraseña actual ingresada es incorrecta.' });
+        }
+      }
+
+      const updated = await updatePasswordInDb(cleanEmail, newHash);
+      if (updated) {
+        return res.json({ mensaje: '¡Contraseña actualizada exitosamente en MySQL!' });
+      } else {
+        return res.status(500).json({ error: 'No se pudo actualizar el registro de contraseña.' });
+      }
+    } catch (err: any) {
+      console.error('[MySQL Password Update Error]:', err.message);
+      return res.status(500).json({ error: `Error en base de datos: ${err.message}` });
+    }
+  }
+
+  // 2. Fallback en memoria
+  const user = usuarios.find((u) => u.email.toLowerCase() === cleanEmail);
+  if (!user) {
+    return res.status(404).json({ error: 'Usuario no encontrado.' });
+  }
+
+  if (passwordActual) {
+    const matches = await verifyPassword(String(passwordActual), user.passwordHash);
+    if (!matches) {
+      return res.status(401).json({ error: 'La contraseña actual ingresada es incorrecta.' });
+    }
+  }
+
+  user.passwordHash = newHash;
+  return res.json({ mensaje: '¡Contraseña actualizada con éxito!' });
 });
 
 // ========================
