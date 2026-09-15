@@ -1,5 +1,7 @@
 package com.grupo_d_c2_2026_unla.rentar.service;
 
+import com.grupo_d_c2_2026_unla.rentar.dto.DisponibilidadFiltroInput;
+import com.grupo_d_c2_2026_unla.rentar.dto.VehiculoDisponibleDTO;
 import com.grupo_d_c2_2026_unla.rentar.dto.VehiculoRequestDTO;
 import com.grupo_d_c2_2026_unla.rentar.dto.VehiculoResponseDTO;
 
@@ -16,4 +18,7 @@ public interface VehiculoService {
     public VehiculoResponseDTO buscarPorId(Integer id);
 
     public List<VehiculoResponseDTO> listarTodos();
+    
+    List<VehiculoDisponibleDTO> consultarDisponibilidad(DisponibilidadFiltroInput filtro);
+    
 }

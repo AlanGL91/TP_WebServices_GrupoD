@@ -3,10 +3,14 @@ package com.grupo_d_c2_2026_unla.rentar.service.implementation;
 import com.grupo_d_c2_2026_unla.rentar.dto.VehiculoRequestDTO;
 import com.grupo_d_c2_2026_unla.rentar.dto.VehiculoResponseDTO;
 import com.grupo_d_c2_2026_unla.rentar.entity.Vehiculo;
+import com.grupo_d_c2_2026_unla.rentar.enums.EstadoReserva;
 import com.grupo_d_c2_2026_unla.rentar.enums.EstadoVehiculo;
 import com.grupo_d_c2_2026_unla.rentar.repository.VehiculoRepository;
 import com.grupo_d_c2_2026_unla.rentar.service.VehiculoService;
+import com.grupo_d_c2_2026_unla.rentar.dto.DisponibilidadFiltroInput;
+import com.grupo_d_c2_2026_unla.rentar.dto.VehiculoDisponibleDTO;
 import org.springframework.stereotype.Service;
+
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -90,4 +94,33 @@ public class VehiculoServiceImpl implements VehiculoService {
         dto.setActivo(vehiculo.isActivo());
         return dto;
     }
+
+    @Override
+    public List<VehiculoDisponibleDTO> consultarDisponibilidad(DisponibilidadFiltroInput filtro) {
+        if (filtro == null) {
+            throw new IllegalArgumentException("El filtro de disponibilidad es obligatorio.");
+        }
+        filtro.validar();
+
+        return vehiculoRepository.buscarDisponibles(
+                        filtro.getTipoVehiculo(),
+                        normalizar(filtro.getMarca()),
+                        normalizar(filtro.getModelo()),
+                        filtro.getPrecioMinimo(),
+                        filtro.getPrecioMaximo(),
+                        filtro.getFechaInicioComoDateTime(),
+                        filtro.getFechaFinComoDateTime(),
+                        EstadoReserva.CANCELADA
+                ).stream()
+                .map(VehiculoDisponibleDTO::fromEntity)
+                .toList();
+    }
+
+    private String normalizar(String valor) {
+        if (valor == null || valor.isBlank()) {
+            return null;
+        }
+        return valor.trim();
+    }
+
 }
