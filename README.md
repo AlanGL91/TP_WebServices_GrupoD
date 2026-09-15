@@ -93,6 +93,7 @@ Una vez cumplidos los requisitos previos:
 3. Confirmar que la base de datos `rentar` haya sido creada mediante `Proyecto/BD/rentarBD.sql`.
 4. Ejecutar la aplicación Spring Boot.
 5. Una vez iniciada la aplicación, utilizar Swagger para consultar y probar los endpoints REST disponibles.
+6. Para las consultas Graph dirigirse a http://localhost:8080/graphiql
 
 ## Equipo
 
