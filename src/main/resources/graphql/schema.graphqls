@@ -1,0 +1,40 @@
+"""Consultas disponibles para los clientes de Rentar."""
+type Query {
+    """
+    Busca vehículos activos y sin reservas superpuestas durante todo el período indicado.
+    Las reservas canceladas no bloquean la disponibilidad.
+    """
+    vehiculosDisponibles(filtro: DisponibilidadFiltroInput!): [VehiculoDisponible!]!
+}
+
+"""Filtros para consultar disponibilidad. Inicio y fin usan formato ISO-8601."""
+input DisponibilidadFiltroInput {
+    tipoVehiculo: TipoVehiculo
+    marca: String
+    modelo: String
+    precioMinimo: Float
+    precioMaximo: Float
+    """Ejemplo: 2026-10-01T10:00:00"""
+    fechaInicio: String!
+    """Ejemplo: 2026-10-05T10:00:00"""
+    fechaFin: String!
+}
+
+"""Vehículo disponible para alquilar durante el período solicitado."""
+type VehiculoDisponible {
+    patente: String!
+    marca: String!
+    modelo: String!
+    anio: Int!
+    color: String
+    tipoVehiculo: TipoVehiculo!
+    precioDiario: Float!
+}
+
+enum TipoVehiculo {
+    SEDAN
+    SUV
+    PICKUP
+    COUPE
+    HATCHBACK
+}
